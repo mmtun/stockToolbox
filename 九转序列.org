@@ -1,0 +1,27 @@
+
+* 九转序列说明
+
+  九转序列是一项“择时”策略。可以判断大盘、个股在K线周期或分时线周期中当前价格的所处的位置。当出现 “9” 时价格的走向将可能发生转向。
+
+  当然，九转序列不是预言神器，它提示的是当前的位置是相对高点（或低点）的位置。要想提升判断的准确率，还需要结合MACD结构以及浪型（主级正向波、次级逆向波）性质等其他条件来判断。
+
+* 源代码
+
+#MainChart
+//计算和绘制高9--
+A1:=C>Ref(c,4);
+nt:=BarsLastCount(A1);
+TJ11:=nt=9;
+TJ13:=IsLastBar and Between(NT,2,8);
+AY:=(BackSet(TJ11>0,9) Or BackSet(TJ13>0,Nt))*Nt;
+DrawNumber(AY>0,H,AY,0),Pxup13,colorff00ff;
+DrawNumber(NT=9,H,9,0),Pxup13,ColorYellow;
+//计算和绘制低9
+b1:=C<ref(c,4);
+NT0:=BarsLastCount(B1);
+TJ21:=nt0=9;
+TJ23:=IsLastBar and Between(NT0,5,8);
+AY1:=(BackSet(TJ21>0,9) Or BackSet(TJ23>0,Nt0))*Nt0;
+DrawNumber(AY1>0,L,AY1,0),colorff00ff;
+DrawNumber(NT0=9,L,9,0),ColorYellow;
+
