@@ -1,4 +1,5 @@
 
+#+HEADER: :tangle yes
 * 九转序列说明
 
   九转序列是一项“择时”策略。可以判断大盘、个股在K线周期或分时线周期中当前价格的所处的位置。当出现 “9” 时价格的走向将可能发生转向。
@@ -6,22 +7,42 @@
   当然，九转序列不是预言神器，它提示的是当前的位置是相对高点（或低点）的位置。要想提升判断的准确率，还需要结合MACD结构以及浪型（主级正向波、次级逆向波）性质等其他条件来判断。
 
 * 源代码
+  
+  定义图表显示方式，需要和主图显示在一起
+  #+BEGIN_SRC text :tangle yes
+    #MainChart
+  #+END_SRC
 
-#MainChart
-//计算和绘制高9--
-A1:=C>Ref(c,4);
-nt:=BarsLastCount(A1);
-TJ11:=nt=9;
-TJ13:=IsLastBar and Between(NT,2,8);
-AY:=(BackSet(TJ11>0,9) Or BackSet(TJ13>0,Nt))*Nt;
-DrawNumber(AY>0,H,AY,0),Pxup13,colorff00ff;
-DrawNumber(NT=9,H,9,0),Pxup13,ColorYellow;
-//计算和绘制低9
-b1:=C<ref(c,4);
-NT0:=BarsLastCount(B1);
-TJ21:=nt0=9;
-TJ23:=IsLastBar and Between(NT0,5,8);
-AY1:=(BackSet(TJ21>0,9) Or BackSet(TJ23>0,Nt0))*Nt0;
-DrawNumber(AY1>0,L,AY1,0),colorff00ff;
-DrawNumber(NT0=9,L,9,0),ColorYellow;
+  定义计算高九的公式。公式的含义为当前周期的收盘价大于向前数第四个周期的收盘价。当前周期计数为1.
+  #+BEGIN_SRC text :tangle yes
+    h9Expression := C>Ref(C,4);
+  #+END_SRC
 
+  需要统计上述条件在历史上连续满足的次数（从当前周期开始，向前推算），当计数器到达9时则完成了一次9转序列的计算。
+  #+BEGIN_SRC text :tangle yes
+    h9Counter := BarsLastCount(h9Expression);
+  #+END_SRC
+  
+  在绘制K线的同时计算当前K线所处的9转序列位置。（赋值范围是1-8）。其中当前周期K线IsLastBar函数返回1。
+  #+BEGIN_SRC text :tangle yes
+    h9Pos1 := h9Counter=9;
+    h9Pos28 := IsLastBar and Between(h9Counter,2,8);
+    h9Pos := (BackSet(h9Pos1>0,9) Or BackSet(h9Pos28>0,h9Counter)) * h9Counter;
+  #+END_SRC
+  
+  在图表上绘制9转序列（高9部分）。当当前K线为9转序列的最后一根线时，赋值为9，并使用单独的颜色表示。
+  在K线上绘制数字是，绘制函数会遍历当前图表范围内的所有数据，并按照逐根的方式绘制。
+  #+BEGIN_SRC text :tangle yes
+    DrawNumber(h9Pos>0,H,h9Pos,0),Pxup13,colorff00ff;
+    DrawNumber(h9Counter=9,H,9,0),Pxup13,ColorYellow;
+  #+END_SRC
+
+  #+BEGIN_SRC text :tangle yes
+    b1:=C<ref(c,4);
+    NT0:=BarsLastCount(B1);
+    TJ21:=nt0=9;
+    TJ23:=IsLastBar and Between(NT0,5,8);
+    AY1:=(BackSet(TJ21>0,9) Or BackSet(TJ23>0,Nt0))*Nt0;
+    DrawNumber(AY1>0,L,AY1,0),colorff00ff;
+    DrawNumber(NT0=9,L,9,0),ColorYellow;
+  #+END_SRC
