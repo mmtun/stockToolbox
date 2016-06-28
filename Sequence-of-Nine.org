@@ -27,8 +27,8 @@
    在绘制K线的同时计算当前K线所处的9转序列位置。（赋值范围是1-8）。其中当前周期K线IsLastBar函数返回1。对于1~4的序列（没有到达5之前）都予以隐藏。
    #+BEGIN_SRC text :tangle yes
      H9Pos1 := H9Counter=9;
-     H9Pos28 := IsLastBar and Between(H9Counter,5,8);
-     H9Pos := (BackSet(H9Pos1>0,9) Or BackSet(H9Pos28>0,H9Counter)) * H9Counter;
+     H9Pos58 := IsLastBar and Between(H9Counter,5,8);
+     H9Pos := (BackSet(H9Pos1>0,9) Or BackSet(H9Pos58>0,H9Counter)) * H9Counter;
    #+END_SRC
    
    在图表上绘制9转序列（高9部分）。当当前K线为9转序列的最后一根线时，赋值为9，并使用单独的颜色表示。
@@ -51,3 +51,4 @@
      DrawNumber(L9Pos>0,L,L9Pos,0),colorff00ff;
      DrawNumber(L9Counter=9,L,9,0),ColorYellow;
    #+END_SRC
+
