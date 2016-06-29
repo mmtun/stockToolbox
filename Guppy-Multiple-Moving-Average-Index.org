@@ -13,3 +13,69 @@
 ** 移动平均线（短期组和长期组）
 
    短期组由3、5、8、10、12、15等6条均线组成。长期组由30、35、40、45、50、60等6条均线组成。
+
+* 源代码
+
+  #+BEGIN_SRC text :tangle yes
+      E3:EMA(C,3),COLORRED;
+    E5:EMA(C,5),COLORRED;
+    E8:EMA(C,8),COLORRED;
+    E10:EMA(C,10),COLORRED;
+    E12:EMA(C,12),COLORRED;
+    E15:EMA(C,15),COLORRED;
+    PartLine(E3<Ref(E3,3) Or E15<Ref(E15,3),E3),ColorGreen;
+    PartLine(E5<Ref(E5,3) Or E15<Ref(E15,3),E5),ColorGreen;
+    PartLine(E8<Ref(E8,3) Or E15<Ref(E15,3),E8),ColorGreen;
+    PartLine(E10<Ref(E10,3) Or E15<Ref(E15,3),E10),ColorGreen;
+    PartLine(E12<Ref(E12,3) Or E15<Ref(E15,3),E12),ColorGreen;
+    PartLine(E15<Ref(E15,3),E15),ColorGreen;
+    TestPeriod := 20;
+    STrans := ( Abs(MaxList(E3,E5,E8,E10,E12,E15)-MinList(E3,E5,E8,E10,E12,E15)) < 
+                Abs(MaxList(Ref(E3,1),Ref(E5,1),Ref(E8,1),Ref(E10,1),Ref(E12,1),Ref(E15,1)) - 
+                            MinList(Ref(E3,1),Ref(E5,1),Ref(E8,1),Ref(E10,1),Ref(E12,1),Ref(E15,1))
+                               )
+                      ) And 
+                      ( Exist( CrossOver(E3,E15),TestPeriod) Or
+                            Exist( CrossUnder(E3,E15),TestPeriod ));
+    PartLine(STrans,E3),ColorBlue;
+    PartLine(STrans,E5),ColorBlue;
+    PartLine(STrans,E8),ColorBlue;
+    PartLine(STrans,E10),ColorBlue;
+    PartLine(STrans,E12),ColorBlue;
+    PartLine(STrans,E15),ColorBlue;
+
+    E30:EMA(C,30),ColorBrown;
+    E35:EMA(C,35),ColorBrown;
+    E40:EMA(C,40),ColorBrown;
+    E45:EMA(C,45),ColorBrown;
+    E50:EMA(C,50),ColorBrown;
+    E60:EMA(C,60),ColorBrown;//COLORD1875A;
+    PartLine(E30<Ref(E30,1) AND E60<REF(E60,1),E30),ColorCyan;
+    PartLine(E35<Ref(E35,1) AND E60<REF(E60,1),E35),ColorCyan;
+    PartLine(E40<Ref(E40,1) AND E60<REF(E60,1),E40),ColorCyan;
+    PartLine(E45<Ref(E45,1) AND E60<REF(E60,1),E45),ColorCyan;
+    PartLine(E50<Ref(E50,1) AND E60<REF(E60,1),E50),ColorCyan;
+    PartLine(E60<Ref(E60,1),E60),ColorCyan;
+    LTrans := ( Abs(MaxList(E30,E35,E40,E45,E50,E60)-MinList(E30,E35,E40,E45,E50,E60)) < 
+                Abs(MaxList(Ref(E30,1),Ref(E35,1),Ref(E40,1),Ref(E45,1),Ref(E50,1),Ref(E60,1)) - 
+                            MinList(Ref(E30,1),Ref(E35,1),Ref(E40,1),Ref(E45,1),Ref(E50,1),Ref(E60,1))
+                               )
+                      ) And
+                      ( Exist(CrossOver(E30,E35), 5) Or
+                        Exist(CrossUnder(E30,E35), 5));
+               //(Abs(REF(E30,1)-REF(E60,1))<Abs(Ref(E30,2)-Ref(E60,2))) And
+                       //(Abs(REF(E30,2)-REF(E60,2))<Abs(Ref(E30,3)-Ref(E60,3))));
+    PartLine(LTrans,E30),ColorYellow;
+    PartLine(LTrans,E35),ColorYellow;
+    PartLine(LTrans,E40),ColorYellow;
+    PartLine(LTrans,E45),ColorYellow;
+    PartLine(LTrans,E50),ColorYellow;
+    PartLine(LTrans,E60),ColorYellow;
+
+    STICKLINE(C>O,C,O,8,1),COLORRED;
+    STICKLINE(C>O,C,H,0.8,1),COLORRED;
+    STICKLINE(C>O,O,L,0.8,1),COLORRED;
+    STICKLINE(C<=O,C,O,8,0),COLORFFFF52;
+    STICKLINE(C<=O,H,L,0.8,1),COLORFFFF52;
+
+  #+END_SRC
