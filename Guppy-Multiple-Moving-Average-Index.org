@@ -74,12 +74,12 @@
 
   绘制长期均线组的下降部分
   #+BEGIN_SRC text :tangle yes
-    PartLine(E3<Ref(E3,3) Or E15<Ref(E15,3),E3),ColorGreen;
-    PartLine(E5<Ref(E5,3) Or E15<Ref(E15,3),E5),ColorGreen;
-    PartLine(E8<Ref(E8,3) Or E15<Ref(E15,3),E8),ColorGreen;
-    PartLine(E10<Ref(E10,3) Or E15<Ref(E15,3),E10),ColorGreen;
-    PartLine(E12<Ref(E12,3) Or E15<Ref(E15,3),E12),ColorGreen;
-    PartLine(E15<Ref(E15,3),E15),ColorGreen;
+    PartLine(E30<Ref(E30,3) Or E60<Ref(E60,3),E30),ColorGreen;
+    PartLine(E35<Ref(E35,3) Or E60<Ref(E60,3),E35),ColorGreen;
+    PartLine(E40<Ref(E40,3) Or E60<Ref(E60,3),E40),ColorGreen;
+    PartLine(E45<Ref(E45,3) Or E60<Ref(E60,3),E45),ColorGreen;
+    PartLine(E50<Ref(E50,3) Or E60<Ref(E60,3),E50),ColorGreen;
+    PartLine(E60<Ref(E60,3),E60),ColorGreen;
   #+END_SRC
 
   绘制长期均线组转折阶段
