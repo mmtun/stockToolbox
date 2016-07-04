@@ -50,9 +50,9 @@
 
   在交易师软件中，当前周期使用数组下标 ~0~ 表示。最老的一个周期的数组下标由系统常数 ~DataCount~ 表示。因此最老的一根K线的数组下标应该是 ~DataCount-1~ 。
 
-  下面的循环中，针对历史上的没一条K线，我们都当作 *重要K线A* 寻找重要K线B和C。在后续画线过程中再确定是否需要启用。
+  下面的循环中，针对历史上的每一条K线，我们都当作 *重要K线A* 寻找重要K线B和C。在后续画线过程中再确定是否需要启用。
 
-  #+BEGIN_SRC text :tangle yes
+  #+BEGIN_SRC vbs :tangle yes
     for i=0 to DataCount-1 do//i从0到最后一天（最早的一天）作循环计算
     begin
             for j=i to DataCount-1 do//j从1到i-1作循环计算
