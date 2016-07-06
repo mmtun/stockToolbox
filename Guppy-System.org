@@ -42,68 +42,83 @@
     KLINE(O,H,L,C,0);
   #+END_SRC
   
-  开始进行顾比入场线的计算。使用单独的变量记录日最高价，方便在循环中使用。
+** 顾比倒数发现买入位置
 
-  #+BEGIN_SRC vbs :tangle yes
-    VARIABLE: hh:=High;
-  #+END_SRC
+   开始进行顾比入场线的计算。使用单独的变量记录日最高价，方便在循环中使用。
 
-  在交易师软件中，当前周期使用数组下标 ~0~ 表示。最老的一个周期的数组下标由系统常数 ~DataCount~ 表示。因此最老的一根K线的数组下标应该是 ~DataCount-1~ 。
+   #+BEGIN_SRC vbs :tangle yes
+     VARIABLE: hh:=High;
+   #+END_SRC
 
-  下面的循环中，针对历史上的每一条K线，我们都当作 *重要K线A* 寻找重要K线B和C。在后续画线过程中再确定是否需要启用。
+   在交易师软件中，当前周期使用数组下标 ~0~ 表示。最老的一个周期的数组下标由系统常数 ~DataCount~ 表示。因此最老的一根K线的数组下标应该是 ~DataCount-1~ 。
 
-  在循环中：
+   下面的循环中，针对历史上的每一条K线，我们都当作 *重要K线A* 寻找重要K线B和C。在后续画线过程中再确定是否需要启用。
 
-  * 第一层循环用于遍历所有的K线数组（使用变量i作为数组下标）
-  * 第二层中的第一个循环在第i个数组对象后寻找第一个最高价高于当前周期的K线（使用变量J作为数组下标）。
-    + 使用数组型变量 ~gd~ 来记录每一根K线对应的 重要K线B 的位置。
-    + 完成该循环时，如果找到了这根K线，则将距离当前周期（i周期）的相对位置记录在数组变量中( ~j-i~ )。如果没有找到，则相对位置就是剩余K线的数量（相当于DataCount-1-i）。
-  * 第二层中的第二个循环针对第i个数组对象寻找下一个最高价高于当前周期的K线（使用变量k作为数组下标）。同样记录数组位置。
+   在循环中：
 
-  #+BEGIN_SRC vbs :tangle yes
-    for i=0 to DataCount-1 do
-    begin
-            for j=i to DataCount-1 do
-            begin
-                    if hh[j]>hh[i] then break;
-            end
-            gd[i]:=j-i;
-            
-            for k=j to DataCount-1 Do
-            Begin
-                    if hh[k]>hh[j] Then break;
-            End
-            gbG[i]:=k-i;
-    end
-  #+END_SRC
+   * 第一层循环用于遍历所有的K线数组（使用变量i作为数组下标）
+   * 第二层中的第一个循环在第i个数组对象后寻找第一个最高价高于当前周期的K线（使用变量J作为数组下标）。
+     + 使用数组型变量 ~gd~ 来记录每一根K线对应的 重要K线B 的位置。
+     + 完成该循环时，如果找到了这根K线，则将距离当前周期（i周期）的相对位置记录在数组变量中( ~j-i~ )。如果没有找到，则相对位置就是剩余K线的数量（相当于DataCount-1-i）。
+   * 第二层中的第二个循环针对第i个数组对象寻找下一个最高价高于当前周期的K线（使用变量k作为数组下标）。同样记录数组位置。
 
-  绘制入场线（RCX：入场线的拼音首字母）。绘制过程中，使用LlvBars查找当前周期是否为短期内的最低价。如果是，则该周期为顾比重要K线A。如果不是，那么就忽略该K线。
+   #+BEGIN_SRC vbs :tangle yes
+     for i=0 to DataCount-1 do
+     begin
+             for j=i to DataCount-1 do
+             begin
+                     if hh[j]>hh[i] then break;
+             end
+             gd[i]:=j-i;
+             
+             for k=j to DataCount-1 Do
+             Begin
+                     if hh[k]>hh[j] Then break;
+             End
+             gbG[i]:=k-i;
+     end
+   #+END_SRC
 
-  如果计算得到的入场价格向后持续了两个周期以上，那么在当前周期位置做标记，说明计算该价格的基础K线就（重要K线A）。
+   绘制入场线（RCX：入场线的拼音首字母）。绘制过程中，使用LlvBars查找当前周期是否为短期内的最低价。如果是，则该周期为顾比重要K线A。如果不是，那么就忽略该K线。
 
-  #+BEGIN_SRC vbs :tangle yes
-    RCX:ValueWhen(LlvBars(Low,gbG+1)=0,ref(High,gbG)),ColorRed;
-    DrawIcon(LlvBars(Low,gbG+1)=0 And RCX=RefX(RCX,1), Low, 4); 
-  #+END_SRC
+   如果计算得到的入场价格向后持续了两个周期以上，那么在当前周期位置做标记，说明计算该价格的基础K线就（重要K线A）。
 
-  按照上面的方法计算和绘制止损线。
+   当K线有效站上入场线时发出买入信号（笑脸）。
 
-  #+BEGIN_SRC vbs :tangle yes
-    VARIABLE: ll:=Low;
-    for i=0 to DataCount-1 do
-    begin
-            for j=i to DataCount-1 do
-            begin
-                    if ll[j]<ll[i] then break;
-            end
-            gld[i]:=j-i;
-            
-            for k=j to DataCount-1 Do
-            Begin
-                    if ll[k]<ll[j] Then break;
-            End
-            glbG[i]:=k-i;
-    end
-    CCX:ValueWhen(hhvBars(High,glbG+1)=0,ref(Low,glbG)),ColorGreen;
-    DrawIcon(HhvBars(High,glbG+1)=0 And CCX=RefX(CCX,1), High, 5),Pxup13, ColorGreen; 
-  #+END_SRC
+   #+BEGIN_SRC vbs :tangle yes
+     RCX:ValueWhen(LlvBars(Low,gbG+1)=0,ref(High,gbG)),ColorRed;
+     DrawIcon(LlvBars(Low,gbG+1)=0 And RCX=RefX(RCX,1), Low, 4);
+     DrawIcon(LongCross(C, RCX, 1), Low, 1), Pxdn2;
+   #+END_SRC
+
+** 最大追涨线
+
+   顾比倒数的系统中，还可以用于确定相对安全的追涨买入范围。其基本原理是顾比倒数线与
+
+   #+BEGIN_SRC vbs :tangle yes
+     ZZX:RCX*(1+(RCX-Low)/RCX),ColorYellow;
+   #+END_SRC
+
+** 顾比倒数止损线
+
+   按照上面的方法计算和绘制止损线。
+
+   #+BEGIN_SRC vbs :tangle yes
+     VARIABLE: ll:=Low;
+     for i=0 to DataCount-1 do
+     begin
+             for j=i to DataCount-1 do
+             begin
+                     if ll[j]<ll[i] then break;
+             end
+             gld[i]:=j-i;
+             
+             for k=j to DataCount-1 Do
+             Begin
+                     if ll[k]<ll[j] Then break;
+             End
+             glbG[i]:=k-i;
+     end
+     CCX:ValueWhen(hhvBars(High,glbG+1)=0,ref(Low,glbG)),ColorGreen;
+     DrawIcon(HhvBars(High,glbG+1)=0 And CCX=RefX(CCX,1), High, 5),Pxup13, ColorGreen; 
+   #+END_SRC
