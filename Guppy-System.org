@@ -91,14 +91,6 @@
      DrawIcon(LongCross(C, RCX, 1), Low, 1), Pxdn2;
    #+END_SRC
 
-** 最大追涨线
-
-   顾比倒数的系统中，还可以用于确定相对安全的追涨买入范围。其基本原理是顾比倒数线与
-
-   #+BEGIN_SRC vbs :tangle yes
-     ZZX:RCX*(1+(RCX-Low)/RCX),ColorYellow;
-   #+END_SRC
-
 ** 顾比倒数止损线
 
    按照上面的方法计算和绘制止损线。
@@ -121,4 +113,16 @@
      end
      CCX:ValueWhen(hhvBars(High,glbG+1)=0,ref(Low,glbG)),ColorGreen;
      DrawIcon(HhvBars(High,glbG+1)=0 And CCX=RefX(CCX,1), High, 5),Pxup13, ColorGreen; 
+   #+END_SRC
+
+** 最大追涨线
+
+   顾比倒数的系统中，还可以用于确定相对安全的追涨买入范围。其基本原理是在计算出顾比倒数线之后以重要K线A的低点与顾比倒数线的距离为向上看到同样的距离即为最大追涨价格。
+
+   对于最大追涨价格来说，在出现了一个基准价格之后就可以确认了。图线中，基准K线前显示的最大追涨价格无效。暂时请勿使用。
+
+   不过问题是为什么要用相同的比例而不是价格呢？两者间存在一点点微小的差异啊！
+
+   #+BEGIN_SRC vbs :tangle yes
+     ZZX:RCX*(1+((RCX-ValueWhen(Pos=0,Low))/ValueWhen(Pos-0,Low))),ColorGray,NoDraw;
    #+END_SRC
