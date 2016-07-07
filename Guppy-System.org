@@ -33,6 +33,15 @@
 
    在交易师的图线绘制过程中，我理解是从左向右绘制的。而且每一条绘图指令会单独进入循环，完成整个图线的绘制过程。
 
+** 执行效果
+
+   相关代码的执行效果如下：
+
+     #+BEGIN_CENTER
+     #+ATTR_HTML: :width 400px
+     [[file:Images/Guppy-System-V1.png]]
+     #+END_CENTER
+
 * 源代码
 
   设置代码为“主图叠加”的绘制方式。同时设置顾比倒数线在主图中的显示模式（与主图K线画法相同）。
@@ -126,3 +135,10 @@
    #+BEGIN_SRC vbs :tangle yes
      ZZX:RCX*(1+((RCX-ValueWhen(Pos=0,Low))/ValueWhen(Pos-0,Low))),ColorGray,NoDraw;
    #+END_SRC
+
+* 变更日志
+
+  * V0.0.1：
+    + 完成了第一个版本的顾比倒数线的绘制功能。
+    + 在实现上关注功能的实现，在性能上未作优化。
+    + 添加执行效果抓图
