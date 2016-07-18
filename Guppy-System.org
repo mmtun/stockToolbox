@@ -44,11 +44,46 @@
 
 * 源代码
 
-  设置代码为“主图叠加”的绘制方式。同时设置顾比倒数线在主图中的显示模式（与主图K线画法相同）。
+  设置代码为“主图叠加”的绘制方式。
   
   #+BEGIN_SRC vbs :tangle yes
     #MainChart
-    KLINE(O,H,L,C,0);
+  #+END_SRC
+
+  定义公式参数。在参数的实现中，使用了波峰和波谷的识别系统函数。在该函数中需要设置参数，当波动超过该幅度时即认为出现了一个波峰/波谷。
+
+  #+BEGIN_SRC vbs :tangle yes
+    #TEMPLATE '最低价变动超过 Param#1 % 则确认趋势转折;'
+    Input: N(5,1,60,0);
+  #+END_SRC
+
+  定义和初始化各类变量。变量的初始化非常重要，在未初始化的情况下，在切换股票的过程中可能会出现变量内容混乱的问题。
+
+  * 使用Pos（TroughPos）代表所有我们发现的以最低价连线形成的波谷中前一个波谷的位置，即，序列中的值表示距离上一个波谷的位置。数据类型为 ~序列~ 。当标识为0时，说明该K线就是波谷本身
+  * 使用PPos（Peak Pos）代表所有最高价连线形成的波峰序列。与Pos取值相对应的。PPos每一个元素取值均表示与上一个波峰的位置。
+  * 使用 gd, gbg，表示入场线寻找过程中的 *重要K线B* 和 *重要K线C*。关于这两条K线的说明请参考顾比先生的《趋势交易大师》一书。
+  * 使用 gld, glbg，表示止损线寻找过程中的 *重要K线B* 和 *重要k线C* 。
+  * 为了划线方面，我们分别使用GPBInd/GPCInd表示入场线中K线B和K线C的标记。使用GPBLInd和GPCLInd表示止损线中的K线B和K线C的标记。
+
+  #+BEGIN_SRC vbs :tangle yes
+    Pos:=TroughBars(Low,N,1);
+    PPos:=PeakBars(High, N, 1);
+    Variables: hh(High),TroughPos(Pos), ll(Low), PeakPos(PPos),
+            NumericSeries gd(0),
+            NumericSeries gbg(0),
+            NumericSeries gld(0),
+            NumericSeries glbg(0),
+            NumericSeries GPBInd(0),
+            NumericSeries GPCInd(0),
+            NumericSeries GPBLInd(0),
+            NumericSeries GPCLInd(0);  
+  #+END_SRC
+
+  对于每一只股票，我们都需要遍历该股票的所有数据，因此我们需要设计一个循环，在这个循环中找出所有的高低点信息。
+
+  #+BEGIN_SRC vbs :tangle yes
+    for i=0 to DataCount-1 do
+    begin  
   #+END_SRC
   
 ** 顾比倒数发现买入位置
@@ -135,7 +170,7 @@
    #+BEGIN_SRC vbs :tangle yes
      ZZX:RCX*(1+((RCX-ValueWhen(Pos=0,Low))/ValueWhen(Pos-0,Low))),ColorGray,NoDraw;
    #+END_SRC
-
+   
 * 变更日志
 
   * V0.0.1：
