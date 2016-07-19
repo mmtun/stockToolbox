@@ -45,7 +45,7 @@
 
      #+BEGIN_CENTER
      #+ATTR_HTML: :width 400px
-     [[file:Images/Guppy-System-V1.png]]
+     [[file:Images/Guppy-System-V0.0.1.png]]
      #+END_CENTER
 
 * 源代码
