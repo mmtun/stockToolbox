@@ -61,7 +61,7 @@
 
   * 使用Pos（TroughPos）代表所有我们发现的以最低价连线形成的波谷中前一个波谷的位置，即，序列中的值表示距离上一个波谷的位置。数据类型为 ~序列~ 。当标识为0时，说明该K线就是波谷本身
   * 使用PPos（Peak Pos）代表所有最高价连线形成的波峰序列。与Pos取值相对应的。PPos每一个元素取值均表示与上一个波峰的位置。
-  * 使用 gd, gbg，表示入场线寻找过程中的 *重要K线B* 和 *重要K线C*。关于这两条K线的说明请参考顾比先生的《趋势交易大师》一书。
+  * 使用 gd, gbg，表示入场线寻找过程中的 *重要K线B* 和 *重要K线C* 。关于这两条K线的说明请参考顾比先生的《趋势交易大师》一书。
   * 使用 gld, glbg，表示止损线寻找过程中的 *重要K线B* 和 *重要k线C* 。
   * 为了划线方面，我们分别使用GPBInd/GPCInd表示入场线中K线B和K线C的标记。使用GPBLInd和GPCLInd表示止损线中的K线B和K线C的标记。
 
@@ -79,100 +79,143 @@
             NumericSeries GPCLInd(0);  
   #+END_SRC
 
-  对于每一只股票，我们都需要遍历该股票的所有数据，因此我们需要设计一个循环，在这个循环中找出所有的高低点信息。
+** 循环，找到所有的重要K线
 
-  #+BEGIN_SRC vbs :tangle yes
-    for i=0 to DataCount-1 do
-    begin  
-  #+END_SRC
-  
+   对于每一只股票，我们都需要遍历该股票的所有数据，因此我们需要设计一个循环，在这个循环中找出所有的高低点信息。
+
+   以下代码是循环的起始部分
+
+   #+BEGIN_SRC vbs :tangle yes
+     for i=0 to DataCount-1 do
+     begin  
+   #+END_SRC
+   
 ** 顾比倒数发现买入位置
 
    开始进行顾比入场线的计算。使用单独的变量记录日最高价，方便在循环中使用。
-
-   #+BEGIN_SRC vbs :tangle yes
-     VARIABLE: hh:=High;
-   #+END_SRC
 
    在交易师软件中，当前周期使用数组下标 ~0~ 表示。最老的一个周期的数组下标由系统常数 ~DataCount~ 表示。因此最老的一根K线的数组下标应该是 ~DataCount-1~ 。
 
    下面的循环中，针对历史上的每一条K线，我们都当作 *重要K线A* 寻找重要K线B和C。在后续画线过程中再确定是否需要启用。
 
+   针对循环中发现的重要K线，做好标记，方便在后续图线绘制的过程中在实体K线上添加各种标识。
+
    在循环中：
-
-   * 第一层循环用于遍历所有的K线数组（使用变量i作为数组下标）
-   * 第二层中的第一个循环在第i个数组对象后寻找第一个最高价高于当前周期的K线（使用变量J作为数组下标）。
-     + 使用数组型变量 ~gd~ 来记录每一根K线对应的 重要K线B 的位置。
-     + 完成该循环时，如果找到了这根K线，则将距离当前周期（i周期）的相对位置记录在数组变量中( ~j-i~ )。如果没有找到，则相对位置就是剩余K线的数量（相当于DataCount-1-i）。
-   * 第二层中的第二个循环针对第i个数组对象寻找下一个最高价高于当前周期的K线（使用变量k作为数组下标）。同样记录数组位置。
+   
+   * 当TroughPos[i]的取值为0时，表示该K线就是波谷自己，以这个点为基准可以开始进行K线B和K线C的查找
+   * 按照顾比给出的定义，分别查找得到重要K线B（循环变量为j的）和重要K线C（循环变量为k）
+   * 在找到重要K线时，分别在GPBInd（Guppy B Indicator）和GPCInd（Guppy C Indicator）的相应元素值设置为1。
 
    #+BEGIN_SRC vbs :tangle yes
-     for i=0 to DataCount-1 do
-     begin
-             for j=i to DataCount-1 do
-             begin
-                     if hh[j]>hh[i] then break;
-             end
-             gd[i]:=j-i;
-             
-             for k=j to DataCount-1 Do
+             if TroughPos[i] = 0 then 
              Begin
-                     if hh[k]>hh[j] Then break;
-             End
-             gbG[i]:=k-i;
-     end
-   #+END_SRC
-
-   绘制入场线（RCX：入场线的拼音首字母）。绘制过程中，使用LlvBars查找当前周期是否为短期内的最低价。如果是，则该周期为顾比重要K线A。如果不是，那么就忽略该K线。
-
-   如果计算得到的入场价格向后持续了两个周期以上，那么在当前周期位置做标记，说明计算该价格的基础K线就（重要K线A）。
-
-   当K线有效站上入场线时发出买入信号（笑脸）。
-
-   #+BEGIN_SRC vbs :tangle yes
-     RCX:ValueWhen(LlvBars(Low,gbG+1)=0,ref(High,gbG)),ColorRed;
-     DrawIcon(LlvBars(Low,gbG+1)=0 And RCX=RefX(RCX,1), Low, 4);
-     DrawIcon(LongCross(C, RCX, 1), Low, 1), Pxdn2;
+                     for j=i to DataCount-1 do
+                     begin
+                             if hh[j]>hh[i] then 
+                             Begin
+                                     gd[i]:=j-i;
+                                     GPBInd[j]:=1;
+                                     break;
+                             End
+                     End
+                             
+                     for k=j to DataCount-1 Do
+                     Begin
+                             if hh[k]>hh[j] Then 
+                             Begin
+                                     gbG[i]:=k-i;
+                                     GPCInd[k]:=1;
+                                     break;
+                             End
+                     End
+             End;
    #+END_SRC
 
 ** 顾比倒数止损线
 
-   按照上面的方法计算和绘制止损线。
+   按照上面的方法寻找止损线的重要K线B和重要K线C。
 
    #+BEGIN_SRC vbs :tangle yes
-     VARIABLE: ll:=Low;
-     for i=0 to DataCount-1 do
-     begin
-             for j=i to DataCount-1 do
-             begin
-                     if ll[j]<ll[i] then break;
-             end
-             gld[i]:=j-i;
-             
-             for k=j to DataCount-1 Do
+             if PeakPos[i] = 0 then 
              Begin
-                     if ll[k]<ll[j] Then break;
+                     for j=i to DataCount-1 do
+                     begin
+                             if ll[j]<ll[i] then 
+                             Begin
+                                     gld[i]:=j-i;
+                                     GPBLInd[j]:=1;
+                                     break;
+                             End
+                     end
+                             
+                     for k=j to DataCount-1 Do
+                     Begin
+                             if ll[k]<ll[j] Then 
+                             Begin
+                                     glbG[i]:=k-i;
+                                     GPCLInd[k]:=1;
+                                     break;
+                             End
+                     End
              End
-             glbG[i]:=k-i;
-     end
-     CCX:ValueWhen(hhvBars(High,glbG+1)=0,ref(Low,glbG)),ColorGreen;
-     DrawIcon(HhvBars(High,glbG+1)=0 And CCX=RefX(CCX,1), High, 5),Pxup13, ColorGreen; 
+   #+END_SRC
+
+** 循环结束
+
+   各个重要K线位置已经找到。是时候结束整个循环了。
+
+   #+BEGIN_SRC vbs :tangle yes
+     End   
+   #+END_SRC
+
+** 绘制入场线
+
+   绘制入场线（RCX：入场线的拼音首字母）。利用全面找到的重要K线C的位置，以最高价为准，可以绘制得到入场线。入场线这里使用晶红色作为表示。
+
+   同时，为了辅助判断RCX的绘制是否正确，我们在K线最低价下方保留了各个重要K线的标记。基点标记的颜色为绿色，重要K线B和C的标记颜色为黄色。
+
+   #+BEGIN_SRC vbs :tangle yes
+     RCX:ValueWhen(GPCInd=1, High),ColorMagenta;
+
+     DrawText(Pos=0, Low, '*'),Align0,ColorGreen;
+     DrawText(GPBInd=1, Low, 'B'),Align0,ColorYellow;
+     DrawText(GPCInd=1, Low, 'C'),Align0,ColorYellow;
+   #+END_SRC
+
+** 绘制止损线
+
+   止损线（ZSX，止损线的拼音首字母）。按照同样的方法，我们可以绘制出止损线的位置。止损线使用绿色绘制。
+
+   为了方便判断，我们在K线上方标记了基点和重要K线。标记的颜色为灰色。
+
+   #+BEGIN_SRC vbs :tangle yes
+     ZSX:ValueWhen(GPCLInd=1, Low),ColorGreen;
+
+     DrawText(PPos=0, High, '*'),Align0,Pxup13, ColorGray;
+     DrawText(GPBLInd=1, High, 'B'),Align0,Pxup13, ColorGray;
+     DrawText(GPCLInd=1, High, 'C'),Align0,Pxup13, ColorGray;
    #+END_SRC
 
 ** 最大追涨线
 
-   顾比倒数的系统中，还可以用于确定相对安全的追涨买入范围。其基本原理是在计算出顾比倒数线之后以重要K线A的低点与顾比倒数线的距离为向上看到同样的距离即为最大追涨价格。
+   顾比倒数的系统中，还可以用于确定相对安全的追涨买入范围。其基本原理是在计算出顾比倒数线之后以重要K线A的低点与顾比倒数线的距离(百分比）为向上看到同样的距离即为最大追涨价格。
 
-   对于最大追涨价格来说，在出现了一个基准价格之后就可以确认了。图线中，基准K线前显示的最大追涨价格无效。暂时请勿使用。
+   对于最大追涨价格来说，在出现了一个基准价格之后就可以确认了。
 
-   不过问题是为什么要用相同的比例而不是价格呢？两者间存在一点点微小的差异啊！
+   为了保持图线的朴素，这里没有将图线绘制出来。在交易师左上角可以看到最大追涨线（ZZX，追涨线的拼音首字母）的具体数值。
 
    #+BEGIN_SRC vbs :tangle yes
-     ZZX:RCX*(1+((RCX-ValueWhen(Pos=0,Low))/ValueWhen(Pos-0,Low))),ColorGray,NoDraw;
+     ZZX:RCX*(1+(RCX-ValueWhen(Pos=0,Low))/ValueWhen(Pos=0,Low)),ColorGray,NoDraw;
    #+END_SRC
    
 * 变更日志
 
+  * V0.0.3:
+    + 优化代码，使绘制出来的图线更加符合顾比的定义。
+    + 优化代码执行效率，将两次循环合并到一次循环之中。
+    + 增加代码的执行效果图。
+  * V0.0.2:
+    + 增加代码执行效果图
   * V0.0.1：
     + 完成了第一个版本的顾比倒数线的绘制功能。
     + 在实现上关注功能的实现，在性能上未作优化。
