@@ -1,0 +1,25 @@
+* 九转序列选股公式
+
+  在九转序列公式的应用中，除了查看某个个股的九转位置，帮助进行择时判断
+  以外，我们可以通过以下公式将所有符合 “已出九” 规则的股票筛选出来，
+  供我们在选股的时候查看使用。
+
+  应用九转序列公式的原理，我们可以方便的写出对应的选股公式。具体代码如
+  下：
+
+  #+BEGIN_SRC vbs :tangle yes
+    #SubChart
+    H9Expression := C>Ref(C,4);
+    H9Counter := BarsLastCount(H9Expression);
+
+
+    L9Expression:=C<ref(c,4);
+    L9Counter:=BarsLastCount(L9Expression);
+
+    BuyPoint:Iif(L9Counter=9,1,0);
+    SellPoint:Iif(H9Counter=9,-1,0);
+  #+END_SRC
+
+* 应用
+
+  在使用中，用户可以在“条件选股”中设置 ~BuyPoint>0~ 即可。
