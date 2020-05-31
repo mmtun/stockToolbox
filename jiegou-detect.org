@@ -269,8 +269,9 @@
 		   If macd0[i+1] <= 0 Then //上一条K线的MACD取值为0或负数，则进入新的一个多头周期
 		       _cMaxIndexCounter := _cMaxIndexCounter + 1;
 
-		   If  _cMaxIndexCounter >= 2 And
-                       closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] And
+		   //相邻多头周期进行比较
+		   //If  _cMaxIndexCounter >= 2 And 
+                   If  closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] And
 		       diff0[i]     < diff0[     cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] THEN
 		       dhStatus[i] := CI_DUNHUA;
 
