@@ -1,0 +1,315 @@
+#+title: 结构判断程序
+#+PROPERTY: header-args:vbs :tangle yes
+
+* 钝化和结构
+  
+  在股票技术分析领域， MACD是十分重要的一个技术分析手段。不少股票操作系统是建立在对MACD分析的基础之上的。“钝化”和“结构”分析就是其中之一。
+
+  在MACD分析中“顶底背离”是判断趋势发生转折的重要方法。其具体含义就是：
+
+  * 当股价创新高而MACD中DIFF值未创新高的时候，认为上升趋势发生变化的可能性在增大；DIFF值继续上升的阶段，认为是“钝化阶段”。
+  * 当DIFF值发生转折时，则标志趋势已经改变，发生了“顶部结构形成”事件。
+  * 在股价下降阶段， 以同样的原理，可以做出“底部钝化”、“底部结构形成”等判断。
+
+
+  在实际应用中，当某周期顶部结构形成时，一般认为会延续24个该周期长度的下降周期。简单记忆公式是：
+
+  * 在30分钟顶部结构，会有3天的下降周期； 而90分钟周期顶部结构将导致9天的下周周期。 其他周期以此类推。
+
+* 钝化和结构的纠错
+
+  当股价出现“钝化”时， 如果股价快速上升，则导致DIFF值快速增高， 会导致“钝化消失”。这意味着股价（市场）非常强势，会突破一切“钝化”和“结构”。因此，钝化常常用作风险提示，需要结合其他指标（例如大盘情况等）做好风险控制。
+
+  当股价出现“结构”时， 如果股价快速上升，并创出了股价的新高（较前一或前前次多头周期），则同样意味着结构失效。必要的时候需要及时纠错。
+
+* 程序设计思路
+
+  结合“钝化”和“结构形成”的定义，我们需要知道各个周期在股价方面是否已经创新高，在股价创新高的时候比较对应的DIFF取值，看是否存在“DIFF取值未创新高”的情况，如果存在这种情况，则认为形成了“钝化”。“钝化形成”是后续“结构形成”的重要前提。
+
+  因此我们在程序中首先需要遍历所有K线数据，找到“钝化形成”的点。 达成这个目标要完成两个目标：
+
+  * 找到每个多头周期中股价收盘价最高的周期，每个周期中收盘价的最高值都是后续钝化判断的标杆
+  * 比较相邻或隔一个多头周期的两个周期间股价收盘价和DIFF值之间的关系。
+
+  
+** 确定每个多头周期中的股价收盘价最高点，记录对应高点出现的位置
+
+   遍历所有多头周期，对于每个周期内的股价最大值记录改出现的数组下标位置。
+
+** 找到背离关系
+
+   找到各多头周期的最高收盘价， 则比较相关周期间股价和DIFF取值，找到钝化发生的K线，为后续结构判断做好准备。
+
+   在钝化形成的基础上，继续遍历数据，看DIFF取值的变化情况，完成结构的判断：
+
+   * 当DIFF取值向下转折， 我们认为发生了转折，即形成了结构。
+   * 当DIFF取值继续向上， 并最终高于前一DIFF峰值（或隔峰最高值）时，此时，钝化已经消失。不会在有新的钝化出现。结构自然也就不会再出现了。
+   * 当DIFF取值转折向下后，未出绿脚线，重新掉头上升，此时重新进入钝化状态，需要继续判断结构形成结果
+   * 当DIFF取值转折向下后，出现了绿脚线后重新掉头向上，并出现红角线，则认为股价进入新的多头周期，按照前面的规则重新计算钝化和结构。
+
+   问题：
+
+   * 当股价创新高的时候，通常DIFF取值未达到最高。那么作为标杆是，是去股价最高时的DIFF取值作为比较基础还是用该周期内的DIFF最大值作为比较基础呢？
+     
+     由于DIFF变化较慢，因此取值达到最高的时刻，会出现滞后几个周期的情况。 那么比较和判断的标准应该是哪个呢？
+
+** TODO 在第一个钝化出现的点做标记
+
+** DONE 在空头周期中的波动会产生结构吗？
+
+   不会。 结构的判断，一定需要红角线和绿脚线的间隔。因此，不能在一个周期内判断是否出现结构。
+
+* 代码说明
+
+  通用代码报文头，在交易师软件中，在股票主图上进行绘图。并对脚本做简单的说明。
+
+  #+BEGIN_SRC vbs
+    // 该指标显示为主图指标，不是独立坐标
+    #MAINCHART
+
+    //本脚本用来使用“价格”为主进行背离半段
+    #NOTE "顶部结构判断公式"
+  #+END_SRC
+
+  
+** 寻找多头周期内的收盘价的极值位置
+
+*** 计算MACD、DIFF和DEA取值
+
+    根据MACD相关定义，具体计算公式如下：
+     
+    #+BEGIN_SRC vbs
+      diff0 := EMA(C, 12) - EMA(C, 26);
+      dea := EMA(diff0, 9);
+      macd0 := ( diff0 - dea ) * 2;
+    #+END_SRC
+
+*** 遍历所有K线数据，查找多头周期中的收盘价创新高的位置
+
+    在交易师软件中，K线序列的大小使用 ~DATACOUNT~ 常数表示。 每次刷新K线数据时该取值均会发生变化。 K线序列采用数组方式进行数据访问。其中下标为0的代表最新的一根K线所对应的数据。 因此“最老”的一根K线数据下标应为 ~DATACOUT-1~ 。
+
+    而在交易师软件中，循环函数 ~FOR~ 只能进行下标递增方式的数据遍历方法。因此，我们需要使用 ~REPEAT~ 来按照从老到新的方式进行数据遍历查找。
+
+**** 声明本阶段需要使用的各关键变量
+
+     | 变量名    | 数据类型 | 默认值 | 作用说明                                          |
+     |-----------+----------+--------+---------------------------------------------------|
+     | cMaxIndex | 数组     |      0 | 在多头周期中出现的价格最大值的K线数组下标         |
+     | maxIndex  | 数组     |      0 | 每个多头周期收盘价最大值发生的K线数组标记         |
+     | lastIndex | 数字     |      0 | 当前多头周期内上一次发现收盘价最大值的K线数组下标 |
+
+     * 额外说明：
+       
+       由于交易师中不允许声明动态大小的数组变量，因此cMaxIndex（Compacted Max Index)使用特殊的初始化方法，通过Close函数返回值来确定数组的大小。并把其初始值设置为0；
+
+       上述cMaxIndex数组的大小和diffMax、closeMax数组的大小一致。
+
+     源代码如下：
+
+     #+BEGIN_SRC vbs
+       Variables: 
+	       maxIndex(0),
+	       lastIndex(0);
+
+       closeData := C;
+       cMaxIndex := C * 0;
+     #+END_SRC
+
+**** 查找各周期的所有出现收盘价出现极值的位置
+
+     针对钝化和结构，需要分别实现顶部和底部的判断。
+
+     * 目前暂时仅查找多头周期中收盘价最高的位置。
+     * 对于股票只有2根以内的K线数据执行中，会出现cMaxIndex数组、Repeat会出现数组越界访问的异常。
+
+     cMaxIndex中的数据从最老的K线到最新的K线存储。
+
+     #+BEGIN_SRC vbs
+       //查找所有多头周期中收盘价发生转折的周期位置（点）
+       i := DATACOUNT-1;    //初始化循环用临时变量
+       _cMaxIndexCounter := 0;   //初始化每个周期最大值出现的K线数组下标
+       _lastMaxIndex := DATACOUNT-1;
+       Repeat
+	       BEGIN
+		       IF macd0[i] > 0 THEN  //macd取值为正，为多头周期。
+		       BEGIN
+		               // TODO: 在一根红角线的情况下判断是否准确，待测试；
+
+			       //在第一次进入多头周期的时候，启用一个新的多头周期最大值记录位置
+			       //判断第一次进入多头周期，则意味着上一根K线是绿脚线或在0值位置上。
+			       IF macd0[i+1] <=0 Then
+			       Begin
+			               _cMaxIndexCounter := cMaxIndexCounter + 1;
+				       _lastMaxIndex := i;          //本多头周期第一个最大值
+			       End
+
+			       //查找多头周期内收盘价最高的数组下标
+			       IF closeData[i] > closeData[ _lastMaxIndex ] OR i = _lastMaxIndex THEN          //在当前多头周期内，找到了一个更高的收盘价
+			       Begin
+				       cMaxIndex[ _cMaxIndexCounter ] := i;      //记录出现最大值的位置，便于后续读取相关数据。
+				       _lastMaxIndex := i;
+			       END
+		       END
+		       ELSE    //跳过空头周期，不计算其中的高点
+		       BEGIN
+		               // TODO: 补充空头周期的计算代码
+		               //空头周期计算
+			       lastIndex := 0;
+		       END
+		       i := i-1;
+	       END
+       Until i<0;
+       cMaxIndex[0] := cMaxIndexCounter;        //将多头周期数量记录在数组头部（下标为0）的位置
+     #+END_SRC
+
+*** 测试查找得到的数据是否正确
+
+    由于交易师缺乏外部测试工具，为了测试前面找到的各多头周期代码是否正确，我们可以在K线图上绘制图表，方便人工检查是否存在错误的地方。 具体绘图代码如下：
+
+    #+BEGIN_SRC vbs
+      _cMaxPos := C * 0;
+
+      //将压缩后的数据还原： 方法一
+      For i=1 To cMaxIndex[0] Do
+	  _cMaxPos[ cMaxIndex[i] ] := 20;   //20： 该K线收盘价为对应多头周期中的出现收盘价最高值的标记
+
+      //将压缩后的数据还原： 方法二
+      //i := 1;
+      //Repeat
+      //Begin
+      //	_cMaxPos[ cMaxIndex[ i ] ] := 20;  //20： 该K线收盘价为对应多头周期中的出现收盘价最高值的标记
+      //	i := i+1;
+      //End
+      //Until
+      //	cMaxIndex[i] <= 0;
+
+      cMaxLine: ValueWhen( _cMaxPos > 0, Close), colorff00ff;
+    #+END_SRC
+
+** 开始钝化和结构形成的判断
+
+   截止目前，已经找到了所有多头周期内的收盘价最高值的位置。我们可以开始重新遍历数据，进行钝化和结构的判断了。
+
+*** 顶部钝化和结构的判断
+    
+    为了尽可能早的发现钝化情况，需要在多头周期开始时即监测收盘价格与对照组价格（上一或上上一次多头周期的最高收盘价）开始进行比对。  
+    
+*** 初始化常数变量
+
+    虽然交易师的脚本允许在声明和初始化前直接使用变量，但可能出现一些不可预见的变量取值未初始化的问题。 因此应尽可能提前声明变量并做初始化。
+
+    对于数组类型的变量， 交易师脚本程序不能声明动态大小的数组。因此，在使用中需要重点关注每个数组元素变量的初始化。
+
+    为方便数组下标的访问，定义如下常量：
+
+    | 常量名           | 取值 | 常量说明                     |
+    |------------------+------+------------------------------|
+    | CI_CURRENTPERIOD |    0 | 当前分析周期数据数组下标     |
+    | CI_LASTPERIOD    |    1 | 上一分析周期数据的数组下标   |
+    | CI_LLASTPERIOD   |    2 | 上上分析周期数据的数组下标   |
+
+    #+BEGIN_SRC vbs
+      Const: 
+	      CI_CURRPERIOD(0),
+	      CI_LASTPERIOD(1),
+	      CI_LLASTPERIOD(2);
+    #+END_SRC
+
+*** 初始化需要使用的各变量
+
+     | 变量名   | 数据类型 | 默认值 | 作用说明                                    |
+     |----------+----------+--------+---------------------------------------------|
+     | diffMax  | 数组     |      0 | 记录包括当前周期在内3个多头周期DIFF的最大值 |
+     | closeMax | 数组     |      0 | 记录包括当前周期在内3个多头周期收盘价最大值 |
+     |----------+----------+--------+---------------------------------------------|
+     | dhStatus | 数组     |      0 | 记录钝化状态                                |
+
+
+     * 钝化状态有三个取值, 我们设置常量以记录这些值：
+       + 0 ： 无状态
+       + 10： 钝化状态
+       + 20： 钝化消失
+       + 30： 结构形成
+
+    #+BEGIN_SRC vbs
+      Variables:
+	      diffMax[3](0),
+	      closeMax[3](0);
+
+      Const:
+	      CI_UNSET(0),
+	      CI_DUNHUA(10),
+	      CI_DUNHUA_DISAPPEAR(20),
+	      CI_JIEGOU(30);
+
+      dhStatus := C * 0;  //钝化标记。
+    #+END_SRC
+
+*** 遍历K线数据查找钝化和结构点
+    
+    重新遍历closeData K线数组，寻找可能的钝化点和结构形成点。
+
+    根据前面cMaxIndex数组的定义， cMaxIndex[0]存储了从最老的多头周期开支找到的多头周期数量， 后续每个元素是对应周期中收盘价最大值的K线数组下标。 要判断钝化，至少应从第二个多头周期开始。设 i 为当前K线位置，则读取对应周期收盘价最大值的方法是：
+
+    * 当前多头周期最大收盘价： closeData[ cMaxIndex[ i - CI_CURRENTPERIOD ];
+    * 上一多头周期最大收盘价： closeData[ cMaxIndex[ i - CI_LASTPERIOD ];
+    * 上上多头周期最大收盘价： closeData[ cMaxIndex[ i - CI_LLASTPERIOD ];
+
+    #+BEGIN_SRC vbs
+      _cMaxIndexCounter := 2;
+      i := DATACOUNT-1;
+      Repeat
+      BEGIN
+	  IF macd0[i] > 0 THEN    //多头周期，判断顶部钝化和结构
+	  BEGIN
+	       If i >= cMaxIndex[ _cMaxIndexCounter]  Then    //如果当前周期为第一个多头周期，则继续循环。
+		 i:= cMaxIndex[i];    
+	       Else
+	       Begin
+		   If macd0[i+1] <= 0 Then //上一条K线的MACD取值为0或负数，则进入新的一个多头周期
+		       _cMaxIndexCounter := _cMaxIndexCounter + 1;
+
+		   If  _cMaxIndexCounter >= 2 And
+                       closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] And
+		       diff0[i]     < diff0[     cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] THEN
+		       dhStatus[i] := CI_DUNHUA;
+
+                   If dhStatus[i+1] = CI_DUNHUA And 
+                       diff0[i] < diff0[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ]] And
+                       diff0[i] < diff0[ i+1 ] Then
+                       dhStatus[i] := CI_JIEGOU;
+
+                   If dhStatus[i+1] = CI_DUNHUA And 
+                       diff0[i] > diff0[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ]] THEN
+                       dhStatus[i] := CI_DUNHUA_DISAPPEAR;
+               End
+	   END
+	   Else    //空头周期的处理代码
+	   Begin
+	       //TODO： 完成底部钝化和结构的判断代码
+	   End
+
+	   i := i-1;
+      END
+      Until i<=0;
+
+    #+END_SRC
+
+    #+BEGIN_SRC 
+
+      //DIFF1: diff0, ColorWhite;
+      //DEA1: dea, ColorYellow;
+      //MACD1: macd0, ColorMagenta;
+
+      //diffMax00: diffMax, ColorRed;
+      //closeMax00: closeMax, ColorYellow;
+      //indcade00: maxIndex, ColorGray;
+      //钝化: dhIndex, ColorGreen;
+      //结构: jgIndex, ColorRed;
+      ////DH: ValueWhen( dhIndex>0, closeMax), ColorMagenta;
+      //diffMax22: diffMax2, ColorGreen;
+      //DunHua: dunHua, ColorRed;
+      DRAWTEXT( dhIndex>0, H, '钝化'), Pxup13,colorff00ff;
+      DrawText( jgIndex>0, H, '结构形成'), Pxup13,ColorRed;
+      DrawText( jgIndex<0, H, '钝化消失'), Pxup13,ColorGreen
+    #+END_SRC
