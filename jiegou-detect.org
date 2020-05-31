@@ -275,14 +275,21 @@
 		       diff0[i]     < diff0[     cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] THEN
 		       dhStatus[i] := CI_DUNHUA;
 
-                   If dhStatus[i+1] = CI_DUNHUA And 
-                       diff0[i] < diff0[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ]] And
-                       diff0[i] < diff0[ i+1 ] Then
-                       dhStatus[i] := CI_JIEGOU;
-
+		   //上一周期钝化，但当前周期DIFF取值不再小于前一周期的DIFF取值。钝化消失
                    If dhStatus[i+1] = CI_DUNHUA And 
                        diff0[i] > diff0[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ]] THEN
                        dhStatus[i] := CI_DUNHUA_DISAPPEAR;
+
+		   //隔峰多头周期判断
+		   If  _cMaxIndexCounter >= 3 And 
+                       closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] And
+		       diff0[i]     < diff0[     cMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] THEN
+		       dhStatus[i] := CI_DUNHUA;
+
+		   //当前周期钝化时，出现DIFF取值转折
+                   If dhStatus[i] = CI_DUNHUA And diff0[i] < diff0[ i+1 ] Then
+                       dhStatus[i] := CI_JIEGOU;
+
                End
 	   END
 	   Else    //空头周期的处理代码
