@@ -162,7 +162,7 @@
        cMaxIndex[0] := cMaxIndexCounter;        //将多头周期数量记录在数组头部（下标为0）的位置
      #+END_SRC
 
-*** 测试查找得到的数据是否正确
+*** 以绘图方式进行测试
 
     由于交易师缺乏外部测试工具，为了测试前面找到的各多头周期代码是否正确，我们可以在K线图上绘制图表，方便人工检查是否存在错误的地方。 具体绘图代码如下：
 
@@ -254,70 +254,105 @@
     * 当前多头周期最大收盘价： closeData[ cMaxIndex[ i - CI_CURRENTPERIOD ];
     * 上一多头周期最大收盘价： closeData[ cMaxIndex[ i - CI_LASTPERIOD ];
     * 上上多头周期最大收盘价： closeData[ cMaxIndex[ i - CI_LLASTPERIOD ];
+    
+*** 遍历K线数据查找钝化和结构形成的点
 
-    #+BEGIN_SRC vbs
-      _cMaxIndexCounter := 2;
-      i := DATACOUNT-1;
-      Repeat
-      BEGIN
-	  IF macd0[i] > 0 THEN    //多头周期，判断顶部钝化和结构
-	  BEGIN
-	       If i >= cMaxIndex[ _cMaxIndexCounter]  Then    //如果当前周期为第一个多头周期，则继续循环。
-		 i:= cMaxIndex[i];    
-	       Else
-	       Begin
+**** 启动循环
+     关于循环的起点，当需要遍历所有的K线数据的时候，所有的K线数据有 ~DATACOUNT~ 个。作为数据下标，最老的数据为 ~DATACOUNT-1~ 。 而钝化的判断，至少需要两组红角线（多头周期），因此，循环的起点应该是历史上第二个多头周期的第一根红角线。
+
+     找到第二个多头周期的第一根红角线，从第一个多头周期的收盘价最大值的位置开始向后（最新的数据方向）检索。
+
+     #+BEGIN_SRC vbs
+       _cMaxIndexCounter := 1;
+       If cMaxIndex[0] >= _cMaxIndexCounter+1 Then
+       Begin
+	   i := cMaxIndex[ _cMaxIndexCounter ];
+	   Repeat
+	   BEGIN
+     #+END_SRC
+
+**** 多头周期，寻找顶部钝化和结构
+
+     判断当前K线进入多头周期：当前K线MACD取值为正，而前一根K线对应MACD取值为负值或为零。
+
+     #+BEGIN_SRC vbs
+	       IF macd0[i] > 0 THEN    //多头周期，判断顶部钝化和结构
+	       BEGIN
 		   If macd0[i+1] <= 0 Then //上一条K线的MACD取值为0或负数，则进入新的一个多头周期
 		       _cMaxIndexCounter := _cMaxIndexCounter + 1;
 
-		   //相邻多头周期进行比较
-		   //If  _cMaxIndexCounter >= 2 And 
-                   If  closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] And
+      #+END_SRC
+
+     当每一个多头周期开始时开始与上一多头周期进行比对，确认是否存在顶部钝化或结构。
+
+     #+BEGIN_SRC vbs
+		   If  closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] And
 		       diff0[i]     < diff0[     cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] THEN
 		       dhStatus[i] := CI_DUNHUA;
+     #+END_SRC
 
+     当上一根K线已进入钝化状态时， 判断当前K线是否出现了“钝化消失”
+
+     #+BEGIN_SRC vbs
 		   //上一周期钝化，但当前周期DIFF取值不再小于前一周期的DIFF取值。钝化消失
-                   If dhStatus[i+1] = CI_DUNHUA And 
-                       diff0[i] > diff0[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ]] THEN
-                       dhStatus[i] := CI_DUNHUA_DISAPPEAR;
+		   If dhStatus[i+1] = CI_DUNHUA And 
+		       diff0[i] > diff0[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ]] THEN
+		       dhStatus[i] := CI_DUNHUA_DISAPPEAR;
+     #+END_SRC
 
-		   //隔峰多头周期判断
-		   If  _cMaxIndexCounter >= 3 And 
-                       closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] And
-		       diff0[i]     < diff0[     cMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] THEN
-		       dhStatus[i] := CI_DUNHUA;
+     如果上一根K线为钝化状态，当前K线经判断是“钝化消失”状态， 则需要补充检查是否存在“隔峰钝化”的情况。对于隔峰钝化场景，则K线至少需要经历了三个多头周期及以上，否则不进行隔峰的判断。
 
+     #+BEGIN_SRC vbs
+		   If  _cMaxIndexCounter >= 3 Then
+		       If dhStatus[i] = CI_DUNHUA_DISAPPEAR And
+		           closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] And
+			   diff0[i]     < diff0[     cMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] THEN
+			   dhStatus[i] := CI_DUNHUA;
+     #+END_SRC
+
+     对于存在钝化状态的K线进行DIFF转折的判断。当DIFF转折发生时，认定结构出现并在当前K线位置做“结构出现”的标记。
+
+     #+BEGIN_SRC vbs
 		   //当前周期钝化时，出现DIFF取值转折
-                   If dhStatus[i] = CI_DUNHUA And diff0[i] < diff0[ i+1 ] Then
-                       dhStatus[i] := CI_JIEGOU;
+		   If dhStatus[i] = CI_DUNHUA And 
+		       diff0[i] < diff0[ i+1 ] Then
+		       dhStatus[i] := CI_JIEGOU;
+		END
+     #+END_SRC
 
-               End
+     
+**** 空头周期，寻找底部钝化和结构
+
+     #+BEGIN_SRC vbs
+		Else    //空头周期的处理代码
+		Begin
+		//TODO： 完成底部钝化和结构的判断代码
+		End
+     #+END_SRC
+
+**** 处理循环控制变量，准备下一条K线的分析
+     #+BEGIN_SRC vbs
+		i := i-1;
 	   END
-	   Else    //空头周期的处理代码
-	   Begin
-	       //TODO： 完成底部钝化和结构的判断代码
-	   End
+	   Until i<=0;
+       End
+     #+END_SRC
 
-	   i := i-1;
-      END
-      Until i<=0;
+     #+BEGIN_SRC 
 
-    #+END_SRC
+       //DIFF1: diff0, ColorWhite;
+       //DEA1: dea, ColorYellow;
+       //MACD1: macd0, ColorMagenta;
 
-    #+BEGIN_SRC 
-
-      //DIFF1: diff0, ColorWhite;
-      //DEA1: dea, ColorYellow;
-      //MACD1: macd0, ColorMagenta;
-
-      //diffMax00: diffMax, ColorRed;
-      //closeMax00: closeMax, ColorYellow;
-      //indcade00: maxIndex, ColorGray;
-      //钝化: dhIndex, ColorGreen;
-      //结构: jgIndex, ColorRed;
-      ////DH: ValueWhen( dhIndex>0, closeMax), ColorMagenta;
-      //diffMax22: diffMax2, ColorGreen;
-      //DunHua: dunHua, ColorRed;
-      DRAWTEXT( dhIndex>0, H, '钝化'), Pxup13,colorff00ff;
-      DrawText( jgIndex>0, H, '结构形成'), Pxup13,ColorRed;
-      DrawText( jgIndex<0, H, '钝化消失'), Pxup13,ColorGreen
-    #+END_SRC
+       //diffMax00: diffMax, ColorRed;
+       //closeMax00: closeMax, ColorYellow;
+       //indcade00: maxIndex, ColorGray;
+       //钝化: dhIndex, ColorGreen;
+       //结构: jgIndex, ColorRed;
+       ////DH: ValueWhen( dhIndex>0, closeMax), ColorMagenta;
+       //diffMax22: diffMax2, ColorGreen;
+       //DunHua: dunHua, ColorRed;
+       DRAWTEXT( dhIndex>0, H, '钝化'), Pxup13,colorff00ff;
+       DrawText( jgIndex>0, H, '结构形成'), Pxup13,ColorRed;
+       DrawText( jgIndex<0, H, '钝化消失'), Pxup13,ColorGreen
+     #+END_SRC
