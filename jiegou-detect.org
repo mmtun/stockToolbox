@@ -147,14 +147,14 @@
                                End
 
                                //查找多头周期内收盘价最高的数组下标
-                               IF closeData[i] > closeData[ _cLastMaxIndex ] OR i = _cLastMaxIndex THEN          //在当前多头周期内，找到了一个更高的收盘价
+                               IF closeData[i] >= closeData[ _cLastMaxIndex ] THEN          //在当前多头周期内，找到了一个更高的收盘价
                                Begin
                                        cMaxIndex[ _cMaxIndexCounter ] := i;      //记录出现最大值的位置，便于后续读取相关数据。
                                        _cLastMaxIndex := i;
                                END
 
 			       //查找多头周期内DIFF取值最高的数组下标
-			       If diff0[i] > diff0[ _dLastMaxIndex ] OR i= _dLastMaxIndex Then
+			       If diff0[i] >= diff0[ _dLastMaxIndex ] Then
 			       Begin
 			               dMaxIndex[ _cMaxIndexCounter ] := i;
 				       _dLastMaxIndex := i;
