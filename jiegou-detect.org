@@ -378,94 +378,93 @@
 	 当结构形成以后，若DIFF值重新掉头向上时，则判断出现“结构消失”。 当结构消失后，后续重新进入“无状态”的阶段，判断是否再次出现“钝化”。
 
       #+BEGIN_SRC vbs
-		// 1. 从“无状态”或“结构消失”状态进入“钝化”
-		If  (dhStatus[i+1] = CI_UNSET Or dhStatus[i+1] = CI_JIEGOU_DISAPPEAR) Then
-		Begin
-		    //临峰钝化判断
-		    If closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] And
-		       diff0[i]     < diff0[     dMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ]  Then
-		    Begin
-			dhStatus[i] := CI_LINFENG_DUNHUA;
-			_diffTurnPoint := i;   //进入钝化状态，初始化_diffTrunPoint变量
-		    End
-		  Else
-		  Begin
-		      //临峰判断失效的情况下补充隔峰钝化判断
-		      If _cMaxIndexCounter >= 3 And 
-			  closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] And
-			  diff0[i]     < diff0[     dMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] Then
-		      Begin   
-			  dhStatus[i] := CI_GEFENG_DUNHUA;
-			  _diffTurnPoint := i;  //进入钝化状态，初始化_diffTrunPoint变量
-		      End
-		  End
-	      End
+              // 1. 从“无状态”或“结构消失”状态进入“钝化”
+              If  (dhStatus[i+1] = CI_UNSET Or dhStatus[i+1] = CI_JIEGOU_DISAPPEAR) Then
+              Begin
+                  //临峰钝化判断
+                  If closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] And
+                     diff0[i]     < diff0[     dMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ]  Then
+                  Begin
+                      dhStatus[i] := CI_LINFENG_DUNHUA;
+                      _diffTurnPoint := i;   //进入钝化状态，初始化_diffTrunPoint变量
+                  End
+                Else
+                Begin
+                    //临峰判断失效的情况下补充隔峰钝化判断
+                    If _cMaxIndexCounter >= 3 And 
+                        closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] And
+                        diff0[i]     < diff0[     dMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] Then
+                    Begin   
+                        dhStatus[i] := CI_GEFENG_DUNHUA;
+                        _diffTurnPoint := i;  //进入钝化状态，初始化_diffTrunPoint变量
+                    End
+                End
+            End
 
-	  // 2. 保持“钝化”状态
-	  If dhStatus[i+1] = CI_LINFENG_DUNHUA Then
-	      If diff0[i] < diff0[ dMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] Then
-		 Begin
-		     dhStatus[i] := CI_LINFENG_DUNHUA;
-		     If diff0[i] > diff0[ _diffTurnPoint ] Then    //diff值在上升，如果下跌转折超过阈值，则脱离钝化状态，无需判断
-			 _diffTurnPoint := i;
-		 End
+            // 2. 保持“钝化”状态
+            If dhStatus[i+1] = CI_LINFENG_DUNHUA Then
+               If diff0[i] < diff0[ dMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] Then
+                  Begin
+                      dhStatus[i] := CI_LINFENG_DUNHUA;
+                      If diff0[i] > diff0[ _diffTurnPoint ] Then    //diff值在上升，如果下跌转折超过阈值，则脱离钝化状态，无需判断
+                          _diffTurnPoint := i;
+                  End
 
-	  If dhStatus[i+1] = CI_GEFENG_DUNHUA Then
-	      If diff0[i] < diff0[ dMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] Then
-		 Begin
-		     dhStatus[i] := CI_GEFENG_DUNHUA;
-		     If diff0[i] > diff0[ _diffTurnPoint ] Then   //diff值在上升，如果下跌转折超过阈值，则脱离钝化状态，无需判断
-			 _diffTurnPoint := i;
-		 End
+            If dhStatus[i+1] = CI_GEFENG_DUNHUA Then
+               If diff0[i] < diff0[ dMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] Then
+               Begin
+                   dhStatus[i] := CI_GEFENG_DUNHUA;
+                   If diff0[i] > diff0[ _diffTurnPoint ] Then   //diff值在上升
+                       _diffTurnPoint := i;
+               End
 
 
-	  // 3. 从“钝化”进入“钝化消失”
-	  If ( dhStatus[i+1] =CI_LINFENG_DUNHUA And
-	       diff0[i] > diff0[ dMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ]]) OR
-	     ( dhStatus[i+1] =CI_GEFENG_DUNHUA And
-	       diff0[i] > diff0[ dMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ]]) THEN
-		  dhStatus[i] := CI_DUNHUA_DISAPPEAR;
+           // 3. 从“钝化”进入“钝化消失”
+           If ( dhStatus[i+1] =CI_LINFENG_DUNHUA And
+                diff0[i] > diff0[ dMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ]]) OR
+              ( dhStatus[i+1] =CI_GEFENG_DUNHUA And
+                diff0[i] > diff0[ dMaxIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ]]) THEN
+                         dhStatus[i] := CI_DUNHUA_DISAPPEAR;
 
-	  // 4. 从“钝化”进入“结构形成”
-	  If ( dhStatus[i] = CI_LINFENG_DUNHUA OR dhStatus[i] = CI_GEFENG_DUNHUA ) Then
-	  Begin
-	      If diff0[i] < diff0[ _diffTurnPoint ] And  
-		 Abs( diff0[i] - diff0[ _diffTurnPoint ] )/ diff0[ _diffTurnPoint ] >= CI_DIFF_TURN_THRESHOLD Then
-		 Begin
-		     dhStatus[i] := CI_JIEGOU;
-		     _diffTurnPoint := i;        //转折判断以结构形成点的DIFF取值为依据，变量不再跟踪变动。
-		 End
-	  End
+           // 4. 从“钝化”进入“结构形成”
+           If ( dhStatus[i+1] = CI_LINFENG_DUNHUA OR dhStatus[i+1] = CI_GEFENG_DUNHUA ) Then
+           Begin
+                If diff0[i] < diff0[ _diffTurnPoint ] And  
+                   Abs( diff0[i] - diff0[ _diffTurnPoint ] )/ diff0[ _diffTurnPoint ] >= CI_DIFF_TURN_THRESHOLD Then
+                Begin
+                   dhStatus[i] := CI_JIEGOU;
+                   _diffTurnPoint := i;        //转折判断以结构形成点的DIFF取值为依据，变量不再跟踪变动。
+               End
+           End
 
-	  // 5. 从“结构”进入“结构消失”
-	  If dhStatus[i+1] = CI_JIEGOU Then
-	  Begin
-	      If diff0[i] > diff0[ _diffTurnPoint ] And  
-		 Abs( diff0[i] - diff0[ _diffTurnPoint ] )/ diff0[ _diffTurnPoint ] >= CI_DIFF_TURN_THRESHOLD Then
-		 Begin
-		     dhStatus[i] := CI_JIEGOU_DISAPPEAR;
-		     _diffTurnPoint := i;        //转折判断以结构形成点的DIFF取值为依据，变量不再跟踪变动。
-		 End
-	  End
-
-	  End
+           // 5. 从“结构”进入“结构消失”
+           If dhStatus[i+1] = CI_JIEGOU Then
+           Begin
+                If diff0[i] > diff0[ _diffTurnPoint ] And  
+                   Abs( diff0[i] - diff0[ _diffTurnPoint ] )/ diff0[ _diffTurnPoint ] >= CI_DIFF_TURN_THRESHOLD Then
+                Begin
+                   dhStatus[i] := CI_JIEGOU_DISAPPEAR;
+                   _diffTurnPoint := i;        //转折判断以结构形成点的DIFF取值为依据，变量不再跟踪变动。
+                End
+           End
+        End
 
       #+END_SRC
 
 ***** 空头周期，寻找底部钝化和结构
 
       #+BEGIN_SRC vbs
-		 Else	//空头周期的处理代码
-		 Begin
-		 //TODO： 完成底部钝化和结构的判断代码
-		 End
+	Else	//空头周期的处理代码
+	Begin
+	    //TODO： 完成底部钝化和结构的判断代码
+	End
       #+END_SRC
 
 ***** 处理循环控制变量，准备下一条K线的分析
       #+BEGIN_SRC vbs
 		 i := i-1;
 	    END
-	    Until i<=0;
+	    Until i<0;
 	End
       #+END_SRC
 
