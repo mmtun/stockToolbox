@@ -296,11 +296,17 @@
       Const:
               CI_UNSET(0),
               CI_LINFENG_DUNHUA(10),
-	      CI_GEFENG_DUNHUA（15),
+              CI_GEFENG_DUNHUA（15),
               CI_DUNHUA_DISAPPEAR(20),
               CI_JIEGOU(30),
-	      CI_JIEGOU_DISAPPEAR(40),
-	      CI_DIFF_TURN_THRESHOLD(0.01);
+              CI_JIEGOU_DISAPPEAR(40),
+              CI_DIFF_TURN_THRESHOLD(0.01),
+
+              CI_LINFENG_DB_DUNHUA(-10),
+              CI_GEFENG_DB_DUNHUA(-15),
+              CI_DB_DUNHUA_DISAPPEAR(-20),
+              CI_DB_JIEGOU(-30),
+              CI_DB_JIEGOU_DISAPPEAR(-40);
 
       dhStatus := C * 0;  //钝化标记。
     #+END_SRC
@@ -324,7 +330,7 @@
 
       #+BEGIN_SRC vbs
 	_cMaxIndexCounter := 1;
-        _cMinIndexXounter := 1;
+        _cMinIndexCounter := 1;
 
         //当多头、空头周期多余2个时才考虑进行周期的判断（避免数组越界访问）
 	If cMaxIndex[0] >= _cMaxIndexCounter+1 Then
@@ -468,13 +474,13 @@
          If macd0[i+1] >=0 Then //上一条K线的MACD取值为0或负数，则进入新的一个空头周期
              _cMinIndexCounter := _cMinIndexCounter + 1;
          // 1. 从“无状态”或“结构消失”状态进入“钝化”
-         If  (dhStatus[i+1] = CI_UNSET Or dhStatus[i+1] = CI_JIEGOU_DISAPPEAR) Then
+         If  (dhStatus[i+1] = CI_UNSET Or dhStatus[i+1] = CI_DB_JIEGOU_DISAPPEAR) Then
          Begin
              //临峰钝化判断
              If closeData[i] < closeData[ cMinIndex[ _cMinIndexCounter - CI_LASTPERIOD ] ] And
                 diff0[i]     > diff0[     dMinIndex[ _cMinIndexCounter - CI_LASTPERIOD ] ]  Then
              Begin
-                 dhStatus[i] := CI_LINFENG_DUNHUA;
+                 dhStatus[i] := CI_LINFENG_DB_DUNHUA;
                  _diffTurnPoint := i;   //进入钝化状态，初始化_diffTrunPoint变量
              End
              Else
@@ -484,61 +490,61 @@
                     closeData[i] < closeData[ cMinIndex[ _cMinIndexCounter - CI_LLASTPERIOD ] ] And
                     diff0[i]     > diff0[     dMinIndex[ _cMinIndexCounter - CI_LLASTPERIOD ] ] Then
                  Begin   
-                     dhStatus[i] := CI_GEFENG_DUNHUA;
+                     dhStatus[i] := CI_GEFENG_DB_DUNHUA;
                      _diffTurnPoint := i;  //进入钝化状态，初始化_diffTrunPoint变量
                  End
              End
          End
 
          // 2. 保持“钝化”状态
-         If dhStatus[i+1] = CI_LINFENG_DUNHUA Then
-            If diff0[i] < diff0[ dMinIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] Then
+         If dhStatus[i+1] = CI_LINFENG_DB_DUNHUA Then
+            If diff0[i] > diff0[ dMinIndex[ _cMinIndexCounter - CI_LASTPERIOD ] ] Then
                Begin
-                   dhStatus[i] := CI_LINFENG_DUNHUA;
-                   If diff0[i] > diff0[ _diffTurnPoint ] Then    //diff值在上升，如果下跌转折超过阈值，则脱离钝化状态，无需判断
+                   dhStatus[i] := CI_LINFENG_DB_DUNHUA;
+                   If diff0[i] < diff0[ _diffTurnPoint ] Then    //diff值在下降
                        _diffTurnPoint := i;
                End
 
-         If dhStatus[i+1] = CI_GEFENG_DUNHUA Then
-            If diff0[i] < diff0[ dMinIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ] ] Then
+         If dhStatus[i+1] = CI_GEFENG_DB_DUNHUA Then
+            If diff0[i] > diff0[ dMinIndex[ _cMinIndexCounter - CI_LLASTPERIOD ] ] Then
             Begin
-                dhStatus[i] := CI_GEFENG_DUNHUA;
-                If diff0[i] > diff0[ _diffTurnPoint ] Then   //diff值在上升
+                dhStatus[i] := CI_GEFENG_DB_DUNHUA;
+                If diff0[i] < diff0[ _diffTurnPoint ] Then   //diff值在下降
                     _diffTurnPoint := i;
             End
 
 
         // 3. 从“钝化”进入“钝化消失”
-        If ( dhStatus[i+1] =CI_LINFENG_DUNHUA And
-             diff0[i] > diff0[ dMinIndex[ _cMaxIndexCounter - CI_LASTPERIOD ]]) OR
-           ( dhStatus[i+1] =CI_GEFENG_DUNHUA And
-             diff0[i] > diff0[ dMinIndex[ _cMaxIndexCounter - CI_LLASTPERIOD ]]) THEN
-                    dhStatus[i] := CI_DUNHUA_DISAPPEAR;
+        If ( dhStatus[i+1] =CI_LINFENG_DB_DUNHUA And
+             diff0[i] < diff0[ dMinIndex[ _cMinIndexCounter - CI_LASTPERIOD ]]) OR
+           ( dhStatus[i+1] =CI_GEFENG_DB_DUNHUA And
+             diff0[i] < diff0[ dMinIndex[ _cMinIndexCounter - CI_LLASTPERIOD ]]) THEN
+                    dhStatus[i] := CI_DB_DUNHUA_DISAPPEAR;
 
         // 4. 从“钝化”进入“结构形成”
-        If ( dhStatus[i+1] = CI_LINFENG_DUNHUA OR dhStatus[i+1] = CI_GEFENG_DUNHUA ) Then
+        If ( dhStatus[i+1] = CI_LINFENG_DB_DUNHUA OR dhStatus[i+1] = CI_GEFENG_DB_DUNHUA ) Then
         Begin
-            If diff0[i] < diff0[ _diffTurnPoint ] And  
+            If diff0[i] > diff0[ _diffTurnPoint ] And  
                Abs( diff0[i] - diff0[ _diffTurnPoint ] )/ diff0[ _diffTurnPoint ] >= CI_DIFF_TURN_THRESHOLD Then
             Begin
-                dhStatus[i] := CI_JIEGOU;
+                dhStatus[i] := CI_DB_JIEGOU;
                 _diffTurnPoint := i;        //转折判断以结构形成点的DIFF取值为依据，变量不再跟踪变动。
             End
         End
 
         // 5. 从“结构”进入“结构消失”
-        If dhStatus[i+1] = CI_JIEGOU Then
+        If dhStatus[i+1] = CI_DB_JIEGOU Then
         Begin
-            If diff0[i] > diff0[ _diffTurnPoint ] And  
+            If diff0[i] < diff0[ _diffTurnPoint ] And  
                Abs( diff0[i] - diff0[ _diffTurnPoint ] )/ diff0[ _diffTurnPoint ] >= CI_DIFF_TURN_THRESHOLD Then
             Begin
-                dhStatus[i] := CI_JIEGOU_DISAPPEAR;
+                dhStatus[i] := CI_DB_JIEGOU_DISAPPEAR;
                 _diffTurnPoint := i;        //转折判断以结构形成点的DIFF取值为依据，变量不再跟踪变动。
             End
         End
       #+END_SRC
 
-      #+BEGIN_SRC 
+      #+BEGIN_SRC vbs
 	End  //空头周期处理结束
       #+END_SRC
 
@@ -564,4 +570,10 @@
        DrawText( dhStatus = CI_DUNHUA_DISAPPEAR, H, '(-)'), Align0,Pxup13,LineThick24,colorGray;
        DrawText( dhStatus = CI_JIEGOU, H, '!'), Align0,Pxup13,LineThick24,colorYellow;
        DrawText( dhStatus = CI_JIEGOU_DISAPPEAR, H, '(!)'), Align0,Pxup13,LineThick24,colorYellow;
+
+       DrawText( dhStatus = CI_LINFENG_DB_DUNHUA, L, '+'), Align0,Pxdn30,LineThick24,colorRed;
+       DrawText( dhStatus = CI_GEFENG_DB_DUNHUA, L, '*'), Align0,Pxdn30,LineThick24,colorRed;
+       DrawText( dhStatus = CI_DB_DUNHUA_DISAPPEAR, L, '(-)'), Align0,Pxdn30,LineThick24,colorGray;
+       DrawText( dhStatus = CI_DB_JIEGOU, L, '!'), Align0,Pxdn30,LineThick24,colorYellow;
+       DrawText( dhStatus = CI_DB_JIEGOU_DISAPPEAR, L, '(!)'), Align0,Pxdn30,LineThick24,colorYellow
      #+END_SRC
