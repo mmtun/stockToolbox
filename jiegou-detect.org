@@ -323,15 +323,13 @@
     
 **** 源代码说明
 
-***** 启动循环
+***** 多头周期，寻找顶部钝化和结构，启动循环
       关于循环的起点，当需要遍历所有的K线数据的时候，所有的K线数据有 ~DATACOUNT~ 个。作为数据下标，最老的数据为 ~DATACOUNT-1~ 。 而钝化的判断，至少需要两组红角线（多头周期），因此，循环的起点应该是历史上第二个多头周期的第一根红角线。
 
       找到第二个多头周期的第一根红角线，从第一个多头周期的收盘价最大值的位置开始向后（最新的数据方向）检索。
 
       #+BEGIN_SRC vbs
 	_cMaxIndexCounter := 1;
-        _cMinIndexCounter := 1;
-
         //当多头、空头周期多余2个时才考虑进行周期的判断（避免数组越界访问）
 	If cMaxIndex[0] >= _cMaxIndexCounter+1 Then
 	Begin
@@ -339,8 +337,6 @@
             Repeat
             BEGIN
       #+END_SRC
-
-***** 多头周期，寻找顶部钝化和结构
 
       判断当前K线进入多头周期：当前K线MACD取值为正，而前一根K线对应MACD取值为负值或为零。
 
@@ -462,16 +458,32 @@
       End    //多头周期处理结束
       #+END_SRC
 
-***** 空头周期，寻找底部钝化和结构
+      处理循环控制变量，准备下一条K线的分析
+
+     #+BEGIN_SRC vbs
+		 i := i-1;
+	    END
+	    Until i<0;
+	End
+     #+END_SRC
+
+***** 处理空头周期，寻找底部钝化和结构
 
       在空头周期中，钝化和结构状态机的转移机制与多头周期中的顶部钝化和结构的判断保持一致。唯一不同的地方在于极值的判断将使用“最低值”。因此，在代码实现中，相关判断逻辑将调整方向。
 
       #+BEGIN_SRC vbs
-	Else	//空头周期的处理代码
-	Begin
+        //开始循环，处理空头周期的K线数据。
+        _cMinIndexCounter := 1;
+        If cMinIndex[0] >= _cMinIndexCounter+1 Then
+        Begin
+            i := cMinIndex[ _cMinIndexCounter ];
+            Repeat
+            BEGIN
       #+END_SRC
 
       #+BEGIN_SRC vbs
+      IF macd0[i] < 0 THEN    //空头周期，判断顶部钝化和结构，循环开始。
+      BEGIN
          If macd0[i+1] >=0 Then //上一条K线的MACD取值为0或负数，则进入新的一个空头周期
              _cMinIndexCounter := _cMinIndexCounter + 1;
          // 1. 从“无状态”或“结构消失”状态进入“钝化”
@@ -547,10 +559,11 @@
       #+END_SRC
 
       #+BEGIN_SRC vbs
-	End  //空头周期处理结束
+      END //空头周期处理结束
       #+END_SRC
 
-***** 处理循环控制变量，准备下一条K线的分析
+      处理循环控制变量，准备下一条K线的分析
+
       #+BEGIN_SRC vbs
 		 i := i-1;
 	    END
