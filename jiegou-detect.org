@@ -475,7 +475,8 @@
          If macd0[i+1] >=0 Then //上一条K线的MACD取值为0或负数，则进入新的一个空头周期
              _cMinIndexCounter := _cMinIndexCounter + 1;
          // 1. 从“无状态”或“结构消失”状态进入“钝化”
-         If  (dhStatus[i+1] = CI_UNSET Or dhStatus[i+1] = CI_DB_JIEGOU_DISAPPEAR) Then
+         If  (dhStatus[i+1] = CI_UNSET Or dhStatus[i+1] = CI_DB_JIEGOU_DISAPPEAR) And
+             macd0[i+1] < 0 Then
          Begin
              //临峰钝化判断
              If closeData[i] < closeData[ cMinIndex[ _cMinIndexCounter - CI_LASTPERIOD ] ] And
