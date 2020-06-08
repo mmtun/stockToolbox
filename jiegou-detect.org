@@ -335,7 +335,7 @@
         //当多头、空头周期多余2个时才考虑进行周期的判断（避免数组越界访问）
 	If cMaxIndex[0] >= _cMaxIndexCounter+1 Then
 	Begin
-            i := DATACOUNT - 1;
+            i := cMaxIndex[ _cMaxIndexCounter ];
             Repeat
             BEGIN
       #+END_SRC
@@ -387,7 +387,8 @@
               If macd0[i+1] <= 0 Then //上一条K线的MACD取值为0或负数，则进入新的一个多头周期
                   _cMaxIndexCounter := _cMaxIndexCounter + 1;
               // 1. 从“无状态”或“结构消失”状态进入“钝化”
-              If  (dhStatus[i+1] = CI_UNSET Or dhStatus[i+1] = CI_JIEGOU_DISAPPEAR) Then
+              If  (dhStatus[i+1] = CI_UNSET Or dhStatus[i+1] = CI_JIEGOU_DISAPPEAR) And
+                  macd0[i+1] > 0 Then
               Begin
                   //临峰钝化判断
                   If closeData[i] > closeData[ cMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] And
