@@ -679,7 +679,7 @@
                End
            End  // 钝化情况判断结束
 
-           //2. 保持钝化状态
+           //2. 保持钝化状态下，跟踪DIFF的数值变化情况
            If dhStatus[i] = CI_LINFENG_DUNHUA Then
                If diff0[i] < diff0[ dMaxIndex[ _cMaxIndexCounter - CI_LASTPERIOD ] ] Then
                    If diff0[i] > diff0[ _diffTurnPoint ] Then    //diff值在上升，如果下跌转折超过阈值，则脱离钝化状态，无需判断
@@ -738,7 +738,7 @@
            If dhStatus[i+1] = CI_JIEGOU Then
            Begin
                If diff0[i] > diff0[ _diffTurnPoint ] And  
-                  Abs( diff0[i] - diff0[ _diffTurnPoint ] )/ diff0[ _diffTurnPoint ] >= CI_DIFF_TURN_THRESHOLD Then
+                  Abs( diff0[i] - diff0[ _diffTurnPoint ] / diff0[ _diffTurnPoint ]) >= CI_DIFF_TURN_THRESHOLD Then
                Begin
                    dhStatus[i] := CI_JIEGOU_DISAPPEAR;
                    _diffTurnPoint := i;        //转折判断以结构形成点的DIFF取值为依据，变量不再跟踪变动。
@@ -761,7 +761,7 @@
        Until i<0;
      #+END_SRC
 
-**** 以绘图方式进行测试
+v**** 以绘图方式进行测试
 
      为了方便体现每根K线的顶部钝化和结构的分析结果，在每个钝化收盘价顶部标记“+”， 在“钝化消失”的收盘线顶部标记“-”，在“结构形成”的收盘价顶部标记“*”。 
 
